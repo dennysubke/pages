@@ -9,6 +9,7 @@ const state = {
   loading: true,
   dashboard: null,
   system: null,
+  settings: null,
   sites: [],
   templates: [],
   templateSearch: '',
@@ -19,6 +20,8 @@ const state = {
   files: [],
   currentFile: null,
   editorContent: '',
+  editorDirty: false,
+  autosaveTimer: null,
   backups: [],
   search: '',
   sidebarOpen: false,
@@ -209,11 +212,12 @@ function navigate(path) {
 }
 
 async function loadBase() {
-  const [dashboard, sites, system, templates] = await Promise.all([api('/api/dashboard'), api('/api/sites'), api('/api/system'), api('/api/templates')]);
+  const [dashboard, sites, system, templates, settings] = await Promise.all([api('/api/dashboard'), api('/api/sites'), api('/api/system'), api('/api/templates'), api('/api/settings')]);
   state.dashboard = dashboard;
   state.sites = sites;
   state.system = system;
   state.templates = templates;
+  state.settings = settings;
 }
 
 async function loadSite(id, tab = 'overview') {
@@ -396,11 +400,73 @@ function templatesView() {
 }
 
 function settingsView() {
-  const access=accessInfo(); const totals=state.dashboard?.totals||{}; const managedTor=state.system?.managed_tor||{};
+  const access = accessInfo();
+  const totals = state.dashboard?.totals || {};
+  const managedTor = state.system?.managed_tor || {};
+  const settings = state.settings || {};
+  const checked = value => value ? 'checked' : '';
+  const selected = (value, expected) => value === expected ? 'selected' : '';
+  const templateOptions = state.templates.map(item => `<option value="${escapeHtml(item.id)}" ${selected(settings.default_template,item.id)}>${escapeHtml(item.name)}</option>`).join('');
   const managedTorValue = managedTor.state === 'ready' ? 'Ready' : managedTor.state === 'starting' ? `Starting · ${managedTor.bootstrap_progress || 0}%` : managedTor.last_error ? 'Unavailable' : 'Waiting';
-  return shell(`<div class="page-head"><div><h1>Settings</h1><p>Pages system information and publishing access.</p></div></div><div class="global-settings-grid"><section class="panel"><div class="panel-head"><h3>Access</h3></div><div class="panel-body quick-list"><div class="quick-row"><div class="quick-row-icon">${icon('wifi')}</div><div><strong>Local network</strong><small>Primary Umbrel address</small></div><div class="value">${escapeHtml(access.local_origin || location.origin)}</div></div><div class="quick-row"><div class="quick-row-icon tor">${icon('tor')}</div><div><strong>Umbrel Onion</strong><small>Shared app Hidden Service</small></div><div class="value">${escapeHtml(access.onion_origin || (access.onion_pending ? 'Waiting for Umbrel' : 'Unavailable'))}</div></div><div class="quick-row"><div class="quick-row-icon tor">${icon('tor')}</div><div><strong>Independent Onion engine</strong><small>Dedicated Tor service for website identities</small></div><div class="value">${escapeHtml(managedTorValue)}</div></div></div></section><section class="panel"><div class="panel-head"><h3>Application</h3></div><div class="panel-body quick-list"><div class="quick-row"><div class="quick-row-icon">${icon('server')}</div><div><strong>Pages version</strong><small>Installed application release</small></div><div class="value">${escapeHtml(state.system?.version || '0.1.1')}</div></div><div class="quick-row"><div class="quick-row-icon">${icon('templates')}</div><div><strong>Included templates</strong><small>Locally available starters</small></div><div class="value">${state.templates.length}</div></div><div class="quick-row"><div class="quick-row-icon">${icon('harddrive')}</div><div><strong>Website storage</strong><small>Current content size</small></div><div class="value">${formatBytes(totals.storage || 0)}</div></div></div></section><section class="panel settings-wide"><div class="panel-head"><h3>Privacy and operation</h3></div><div class="settings-info"><article>${icon('shield')}<div><strong>Local-first by design</strong><p>Website files, backups, statistics and configuration stay on this Umbrel.</p></div></article><article>${icon('code')}<div><strong>Static files only</strong><p>Pages serves HTML, CSS, JavaScript and assets without executing uploaded server-side code.</p></div></article><article>${icon('qr')}<div><strong>Private sharing tools</strong><p>QR codes are generated locally, while Onion links can use either Umbrel's shared service or a dedicated per-site identity.</p></div></article></div></section></div>`, 'settings');
+  return shell(`<div class="page-head"><div><h1>Settings</h1><p>Choose sensible defaults, privacy preferences and maintenance rules for Pages.</p></div><div class="actions"><button class="btn primary" type="submit" form="global-settings-form">${icon('save')}Save changes</button></div></div>
+  <form id="global-settings-form" class="settings-workspace">
+    <nav class="settings-nav">
+      <button type="button" class="active" data-settings-anchor="general">General</button>
+      <button type="button" data-settings-anchor="publishing">Publishing</button>
+      <button type="button" data-settings-anchor="onion">Onion services</button>
+      <button type="button" data-settings-anchor="backups">Backups</button>
+      <button type="button" data-settings-anchor="statistics">Statistics</button>
+      <button type="button" data-settings-anchor="editor">Editor</button>
+      <button type="button" data-settings-anchor="security">Security</button>
+    </nav>
+    <div class="settings-sections">
+      <section class="panel setting-section" id="setting-general"><div class="panel-head"><div><h3>General</h3><p>Defaults used whenever you create a new project.</p></div></div><div class="settings-form-grid">
+        <label class="setting-field"><span>Default template</span><select name="default_template">${templateOptions}</select><small>Preselected in the creation dialog.</small></label>
+        <label class="setting-field"><span>Default publishing state</span><select name="default_published"><option value="false" ${selected(Boolean(settings.default_published),false)}>Draft</option><option value="true" ${selected(Boolean(settings.default_published),true)}>Published</option></select><small>Draft is the safer choice for unfinished work.</small></label>
+        <label class="setting-field"><span>Session duration</span><select name="session_hours"><option value="1" ${selected(settings.session_hours,1)}>1 hour</option><option value="8" ${selected(settings.session_hours,8)}>8 hours</option><option value="24" ${selected(settings.session_hours,24)}>24 hours</option><option value="168" ${selected(settings.session_hours,168)}>7 days</option></select></label>
+        <label class="setting-toggle"><div><strong>Show built-in templates</strong><small>Keep the bundled template library visible.</small></div><input type="checkbox" name="show_builtin_templates" ${checked(settings.show_builtin_templates)}><i></i></label>
+      </div></section>
+      <section class="panel setting-section" id="setting-publishing"><div class="panel-head"><div><h3>Publishing defaults</h3><p>New projects inherit these values and can override them later.</p></div></div><div class="settings-form-grid">
+        <label class="setting-field"><span>Cache policy</span><select name="default_cache_policy"><option value="none" ${selected(settings.default_cache_policy,'none')}>No cache</option><option value="1h" ${selected(settings.default_cache_policy,'1h')}>1 hour</option><option value="1d" ${selected(settings.default_cache_policy,'1d')}>1 day</option><option value="30d" ${selected(settings.default_cache_policy,'30d')}>30 days</option></select></label>
+        <label class="setting-toggle"><div><strong>SPA fallback</strong><small>Serve index.html for unknown routes.</small></div><input type="checkbox" name="default_spa_fallback" ${checked(settings.default_spa_fallback)}><i></i></label>
+        <label class="setting-toggle"><div><strong>CORS access</strong><small>Allow cross-origin requests by default.</small></div><input type="checkbox" name="default_cors" ${checked(settings.default_cors)}><i></i></label>
+        <label class="setting-toggle"><div><strong>Directory listings</strong><small>Show folder contents when no index file exists.</small></div><input type="checkbox" name="default_directory_listing" ${checked(settings.default_directory_listing)}><i></i></label>
+      </div></section>
+      <section class="panel setting-section" id="setting-onion"><div class="panel-head"><div><h3>Onion services</h3><p>Control dedicated identities created for individual projects.</p></div><span class="settings-status">${escapeHtml(managedTorValue)}</span></div><div class="settings-form-grid">
+        <label class="setting-toggle"><div><strong>Enable independent Onion services</strong><small>Allow projects to generate persistent dedicated addresses.</small></div><input type="checkbox" name="independent_onion_enabled" ${checked(settings.independent_onion_enabled)}><i></i></label>
+        <label class="setting-toggle"><div><strong>Create an address automatically</strong><small>Generate an identity whenever a new eligible project is created.</small></div><input type="checkbox" name="auto_create_onion" ${checked(settings.auto_create_onion)}><i></i></label>
+        <label class="setting-toggle"><div><strong>Published projects only</strong><small>Avoid active services for private drafts.</small></div><input type="checkbox" name="onion_published_only" ${checked(settings.onion_published_only)}><i></i></label>
+        <label class="setting-toggle"><div><strong>Restore services after startup</strong><small>Bring saved Onion identities online automatically.</small></div><input type="checkbox" name="restore_onion_on_startup" ${checked(settings.restore_onion_on_startup)}><i></i></label>
+      </div><div class="settings-note">${icon('alert')} Umbrel’s shared Onion address additionally requires <strong>Remote Tor access</strong> under Umbrel Settings → Advanced settings.</div></section>
+      <section class="panel setting-section" id="setting-backups"><div class="panel-head"><div><h3>Backups</h3><p>Automate snapshots and keep storage predictable.</p></div><button type="button" class="btn small" data-action="cleanup-backups">Clean up now</button></div><div class="settings-form-grid">
+        <label class="setting-field"><span>Automatic backups</span><select name="backup_schedule"><option value="off" ${selected(settings.backup_schedule,'off')}>Off</option><option value="daily" ${selected(settings.backup_schedule,'daily')}>Daily</option><option value="weekly" ${selected(settings.backup_schedule,'weekly')}>Weekly</option><option value="before_publish" ${selected(settings.backup_schedule,'before_publish')}>Before publishing</option></select></label>
+        <label class="setting-field"><span>Backups retained per project</span><input type="number" name="backup_retention" min="1" max="100" value="${Number(settings.backup_retention || 10)}"></label>
+        <label class="setting-field"><span>Maximum backup storage</span><div class="input-unit"><input type="number" name="backup_max_storage_mb" min="100" max="102400" value="${Number(settings.backup_max_storage_mb || 1024)}"><span>MB</span></div></label>
+        <div class="setting-summary"><strong>${formatNumber(totals.backups || 0)}</strong><span>local backups</span><small>${formatBytes(totals.backup_storage || 0)} currently used</small></div>
+      </div></section>
+      <section class="panel setting-section" id="setting-statistics"><div class="panel-head"><div><h3>Statistics and privacy</h3><p>Keep lightweight local counts without external analytics.</p></div><button type="button" class="btn small danger" data-action="reset-statistics">Reset all</button></div><div class="settings-form-grid">
+        <label class="setting-toggle"><div><strong>Count page views</strong><small>Store aggregate HTML request counts.</small></div><input type="checkbox" name="statistics_enabled" ${checked(settings.statistics_enabled)}><i></i></label>
+        <label class="setting-toggle"><div><strong>Respect Do Not Track</strong><small>Do not count requests carrying the DNT preference.</small></div><input type="checkbox" name="respect_do_not_track" ${checked(settings.respect_do_not_track)}><i></i></label>
+        <label class="setting-toggle"><div><strong>Ignore local visits</strong><small>Exclude common private network addresses.</small></div><input type="checkbox" name="ignore_local_visits" ${checked(settings.ignore_local_visits)}><i></i></label>
+        <label class="setting-field"><span>Retention preference</span><select name="statistics_retention_days"><option value="30" ${selected(settings.statistics_retention_days,30)}>30 days</option><option value="90" ${selected(settings.statistics_retention_days,90)}>90 days</option><option value="365" ${selected(settings.statistics_retention_days,365)}>1 year</option><option value="3650" ${selected(settings.statistics_retention_days,3650)}>Long term</option></select><small>Reserved for future time-series statistics.</small></label>
+      </div></section>
+      <section class="panel setting-section" id="setting-editor"><div class="panel-head"><div><h3>Editor</h3><p>Adjust the built-in source editor to your workflow.</p></div></div><div class="settings-form-grid">
+        <label class="setting-field"><span>Font size</span><div class="input-unit"><input type="number" name="editor_font_size" min="11" max="24" value="${Number(settings.editor_font_size || 14)}"><span>px</span></div></label>
+        <label class="setting-field"><span>Tab size</span><select name="editor_tab_size"><option value="2" ${selected(settings.editor_tab_size,2)}>2 spaces</option><option value="4" ${selected(settings.editor_tab_size,4)}>4 spaces</option><option value="8" ${selected(settings.editor_tab_size,8)}>8 spaces</option></select></label>
+        <label class="setting-toggle"><div><strong>Word wrap</strong><small>Wrap long lines inside the editor.</small></div><input type="checkbox" name="editor_word_wrap" ${checked(settings.editor_word_wrap)}><i></i></label>
+        <label class="setting-toggle"><div><strong>Auto-save</strong><small>Save an open file after a short pause.</small></div><input type="checkbox" name="editor_autosave" ${checked(settings.editor_autosave)}><i></i></label>
+        <label class="setting-field"><span>Auto-save delay</span><div class="input-unit"><input type="number" name="editor_autosave_delay" min="300" max="10000" step="100" value="${Number(settings.editor_autosave_delay || 1200)}"><span>ms</span></div></label>
+        <label class="setting-toggle"><div><strong>Confirm unsaved changes</strong><small>Warn before navigating away from edited content.</small></div><input type="checkbox" name="confirm_unsaved" ${checked(settings.confirm_unsaved)}><i></i></label>
+      </div></section>
+      <section class="panel setting-section" id="setting-security"><div class="panel-head"><div><h3>Security and status</h3><p>Review access points and operational information.</p></div></div><div class="settings-status-grid">
+        <div><span>${icon('wifi')}</span><strong>Local access</strong><small>${escapeHtml(access.local_origin || location.origin)}</small></div>
+        <div><span>${icon('tor')}</span><strong>Umbrel Onion</strong><small>${escapeHtml(access.onion_origin || (access.onion_pending ? 'Waiting for Umbrel' : 'Unavailable'))}</small></div>
+        <div><span>${icon('server')}</span><strong>Pages version</strong><small>${escapeHtml(state.system?.version || '0.1.2')}</small></div>
+        <div><span>${icon('harddrive')}</span><strong>Content storage</strong><small>${formatBytes(totals.storage || 0)}</small></div>
+      </div></section>
+    </div>
+  </form>`, 'settings');
 }
-
 function siteHeader(site) {
   const openUrl = preferredSiteUrl(site);
   return `<div class="detail-header">
@@ -443,7 +509,7 @@ function filesTab(site) {
   return `<section class="file-layout">
     <aside class="file-sidebar"><div class="file-toolbar"><strong>Files</strong><div class="file-actions"><button class="mini-icon" data-action="new-file" title="New file">${icon('filePlus')}</button><button class="mini-icon" data-action="new-folder" title="New folder">${icon('folderPlus')}</button><button class="mini-icon" data-action="upload-menu" title="Upload">${icon('upload')}</button></div></div><div class="file-tree">${state.files.length ? treeHtml(state.files) : '<div style="padding:20px;color:var(--muted);font-size:12px;text-align:center">This website has no files.</div>'}</div></aside>
     <div class="editor">
-      ${state.currentFile ? `<div class="editor-head"><div class="editor-path">/${escapeHtml(state.currentFile.path)}</div><button class="btn small danger" data-action="delete-file">${icon('trash')}Delete</button><button class="btn small primary" data-action="save-file">${icon('save')}Save</button></div><textarea class="editor-area" id="editor" spellcheck="false">${escapeHtml(state.editorContent)}</textarea>` : `<div class="editor-placeholder"><div>${icon('code')}<strong>Select a file to start editing</strong><p>HTML, CSS, JavaScript, JSON, Markdown and other text files can be edited directly.</p></div></div>`}
+      ${state.currentFile ? `<div class="editor-head"><div class="editor-path">/${escapeHtml(state.currentFile.path)}</div><button class="btn small danger" data-action="delete-file">${icon('trash')}Delete</button><button class="btn small primary" data-action="save-file">${icon('save')}Save</button></div><textarea class="editor-area" id="editor" spellcheck="false" style="font-size:${Number(state.settings?.editor_font_size || 14)}px;tab-size:${Number(state.settings?.editor_tab_size || 2)};white-space:${state.settings?.editor_word_wrap === false ? 'pre' : 'pre-wrap'}">${escapeHtml(state.editorContent)}</textarea>` : `<div class="editor-placeholder"><div>${icon('code')}<strong>Select a file to start editing</strong><p>HTML, CSS, JavaScript, JSON, Markdown and other text files can be edited directly.</p></div></div>`}
     </div>
   </section>`;
 }
@@ -531,9 +597,9 @@ function siteView() {
 }
 
 function createSiteModal() {
-  const selectedId = state.modal?.template || 'portfolio';
+  const selectedId = state.modal?.template || state.settings?.default_template || 'portfolio';
   const selected = state.templates.find(template => template.id === selectedId) || state.templates[0] || { id: 'portfolio', name: 'Portfolio', description: '' };
-  return `<div class="modal-backdrop" data-modal-backdrop><div class="modal create-modal" data-modal-stop><div class="modal-head"><div><h2>Create a website</h2><p>Choose a template, give it a name and decide when to publish.</p></div><button class="close" data-action="close-modal">${icon('close')}</button></div><form id="create-site-form"><div class="modal-body"><div class="create-template-feature"><div class="create-template-preview"><iframe id="create-template-iframe" src="${templatePreviewUrl(selected.id)}" tabindex="-1"></iframe></div><div class="create-template-copy"><span>Selected template</span><h3 id="create-template-name">${escapeHtml(selected.name)}</h3><p id="create-template-description">${escapeHtml(selected.description)}</p><button class="text-button" type="button" data-action="browse-templates">Browse full library →</button></div></div><label class="field-label">Choose a starting point</label><div class="modal-template-strip">${state.templates.map(template => templateCard(template.id, template.icon, template.name, template.description, template.id === selected.id)).join('')}</div><div class="form-grid create-fields"><div class="field"><label for="new-name">Website name</label><input class="input" id="new-name" name="name" placeholder="My website" required autofocus></div><div class="field"><label for="new-slug">URL slug</label><input class="input" id="new-slug" name="slug" placeholder="my-website"></div></div><div class="toggle-row publish-on-create"><div class="toggle-copy"><strong>Publish immediately</strong><small>Turn this off to keep the new website as a private draft.</small></div><label class="switch"><input name="published" type="checkbox" checked><span class="slider"></span></label></div><input type="hidden" name="template" value="${escapeHtml(selected.id)}"></div><div class="modal-foot"><button class="btn" type="button" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">Create website</button></div></form></div></div>`;
+  return `<div class="modal-backdrop" data-modal-backdrop><div class="modal create-modal" data-modal-stop><div class="modal-head"><div><h2>Create a website</h2><p>Choose a template, give it a name and decide when to publish.</p></div><button class="close" data-action="close-modal">${icon('close')}</button></div><form id="create-site-form"><div class="modal-body"><div class="create-template-feature"><div class="create-template-preview"><iframe id="create-template-iframe" src="${templatePreviewUrl(selected.id)}" tabindex="-1"></iframe></div><div class="create-template-copy"><span>Selected template</span><h3 id="create-template-name">${escapeHtml(selected.name)}</h3><p id="create-template-description">${escapeHtml(selected.description)}</p><button class="text-button" type="button" data-action="browse-templates">Browse full library →</button></div></div><label class="field-label">Choose a starting point</label><div class="modal-template-strip">${state.templates.map(template => templateCard(template.id, template.icon, template.name, template.description, template.id === selected.id)).join('')}</div><div class="form-grid create-fields"><div class="field"><label for="new-name">Website name</label><input class="input" id="new-name" name="name" placeholder="My website" required autofocus></div><div class="field"><label for="new-slug">URL slug</label><input class="input" id="new-slug" name="slug" placeholder="my-website"></div></div><div class="toggle-row publish-on-create"><div class="toggle-copy"><strong>Publish immediately</strong><small>Turn this off to keep the new website as a private draft.</small></div><label class="switch"><input name="published" type="checkbox" ${state.settings?.default_published === false ? '' : 'checked'}><span class="slider"></span></label></div><input type="hidden" name="template" value="${escapeHtml(selected.id)}"></div><div class="modal-foot"><button class="btn" type="button" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">Create website</button></div></form></div></div>`;
 }
 
 function templateCard(id, iconName, name, description, active = false) {
@@ -686,6 +752,7 @@ async function openFile(path) {
     const result = await api(`/api/sites/${state.currentSite.id}/file?path=${encodeURIComponent(path)}`);
     state.currentFile = result;
     state.editorContent = result.content;
+    state.editorDirty = false;
     render();
   } catch (error) { toast(error.message, 'error'); }
 }
@@ -696,6 +763,7 @@ async function saveFile() {
   try {
     await api(`/api/sites/${state.currentSite.id}/file?path=${encodeURIComponent(state.currentFile.path)}`, { method: 'PUT', body: new TextEncoder().encode(editor.value), headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
     state.editorContent = editor.value;
+    state.editorDirty = false;
     state.files = await api(`/api/sites/${state.currentSite.id}/files`);
     state.currentSite = await api(`/api/sites/${state.currentSite.id}`);
     toast('File saved');
@@ -811,6 +879,9 @@ async function performConfirmed(action) {
       toast('File deleted');
     } catch (error) { toast(error.message, 'error'); }
   }
+  if (action === 'reset-statistics') {
+    try { await api('/api/settings/statistics/reset', { method: 'POST' }); await loadBase(); render(); toast('Statistics reset'); } catch (error) { toast(error.message, 'error'); }
+  }
   if (action.startsWith('restore-backup:')) {
     const id = action.split(':')[1];
     try {
@@ -913,6 +984,13 @@ app.addEventListener('click', async event => {
   const confirmed = event.target.closest('[data-confirm]')?.dataset.confirm;
   if (confirmed) { await performConfirmed(confirmed); return; }
 
+  const settingsAnchor = event.target.closest('[data-settings-anchor]')?.dataset.settingsAnchor;
+  if (settingsAnchor) {
+    document.querySelectorAll('[data-settings-anchor]').forEach(button => button.classList.toggle('active', button.dataset.settingsAnchor === settingsAnchor));
+    document.querySelector(`#setting-${settingsAnchor}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return;
+  }
+
   const action = event.target.closest('[data-action]')?.dataset.action;
   if (!action) return;
   if (action === 'create-site') openCreateModal();
@@ -942,6 +1020,12 @@ app.addEventListener('click', async event => {
   if (action === 'delete-site') { state.modal = { type: 'confirm', action: 'delete-site', title: `Delete ${state.currentSite.name}?`, message: 'All website files, domains, settings, local backups and any independent Onion identity will be permanently removed.', label: 'Delete website' }; render(); }
   if (action === 'import-zip') { delete zipUpload.dataset.createNew; zipUpload.click(); }
   if (action === 'import-new') { zipUpload.dataset.createNew = 'true'; zipUpload.click(); }
+  if (action === 'cleanup-backups') {
+    try { await api('/api/settings/backups/cleanup', { method: 'POST' }); await loadBase(); render(); toast('Backup cleanup completed'); } catch (error) { toast(error.message, 'error'); }
+  }
+  if (action === 'reset-statistics') {
+    state.modal = { type: 'confirm', action: 'reset-statistics', title: 'Reset all statistics?', message: 'All stored page-view counters will be set to zero.', label: 'Reset statistics' }; render();
+  }
   if (action === 'theme') {
     state.theme = state.theme === 'dark' ? 'light' : 'dark';
     document.documentElement.dataset.theme = state.theme;
@@ -955,6 +1039,37 @@ app.addEventListener('click', async event => {
     state.dashboard = null;
     state.system = null;
     render();
+  }
+});
+
+app.addEventListener('submit', async event => {
+  if (event.target.id !== 'global-settings-form') return;
+  event.preventDefault();
+  const form = new FormData(event.target);
+  const checkboxNames = ['show_builtin_templates','default_spa_fallback','default_cors','default_directory_listing','independent_onion_enabled','auto_create_onion','onion_published_only','restore_onion_on_startup','statistics_enabled','respect_do_not_track','ignore_local_visits','editor_word_wrap','editor_autosave','confirm_unsaved'];
+  const payload = Object.fromEntries(form.entries());
+  for (const name of checkboxNames) payload[name] = form.has(name);
+  payload.default_published = payload.default_published === 'true';
+  try {
+    state.settings = await api('/api/settings', { method: 'PATCH', json: payload });
+    render();
+    toast('Settings saved');
+  } catch (error) { toast(error.message, 'error'); }
+});
+
+app.addEventListener('input', event => {
+  if (event.target.id !== 'editor') return;
+  state.editorDirty = event.target.value !== state.editorContent;
+  if (state.autosaveTimer) clearTimeout(state.autosaveTimer);
+  if (state.settings?.editor_autosave && state.editorDirty) {
+    state.autosaveTimer = setTimeout(() => saveFile(), Number(state.settings.editor_autosave_delay || 1200));
+  }
+});
+
+window.addEventListener('beforeunload', event => {
+  if (state.editorDirty && state.settings?.confirm_unsaved) {
+    event.preventDefault();
+    event.returnValue = '';
   }
 });
 

@@ -3,7 +3,7 @@ set -euo pipefail
 
 WEB_IMAGE="dennysubke/pages"
 TOR_IMAGE="dennysubke/pages-tor"
-VERSION="0.1.1"
+VERSION="0.1.2"
 COMPOSE_FILE="${1:-../umbrel/denny-pages/docker-compose.yml}"
 BUILDER="pages-builder"
 

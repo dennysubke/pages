@@ -1,14 +1,11 @@
 # Pages
 
-Pages is a lightweight static website host designed for Umbrel. It combines a polished control panel, an integrated template library, browser-based editing, local backups, and flexible publishing over the local network, custom domains, Tor, or a completely independent Onion v3 address for each website.
-
-<p align="center">
-  <img src="https://raw.githubusercontent.com/dennysubke/pages/master/public/banner.png" alt="Pages Banner">
-</p>
+Pages is a lightweight static website host designed for Umbrel. It combines a polished control panel, an integrated template library, browser-based editing, local backups, and flexible publishing over the local network, custom domains, Umbrel Tor, or a completely independent Onion v3 address for each website.
 
 ## Features
 
 - Multiple independently managed static websites
+- Umbrel-inspired light and dark interface
 - Overview dashboard with published sites, drafts, visits, storage, backups, and Tor status
 - Dedicated **Sites**, **Templates**, and **Settings** sections
 - Nine professionally designed, responsive templates
@@ -186,8 +183,8 @@ The smoke test includes a local Tor-control simulator and validates independent 
 The Umbrel package uses two multiarch images:
 
 ```text
-dennysubke/pages:0.1.1
-dennysubke/pages-tor:0.1.1
+dennysubke/pages:0.1.2
+dennysubke/pages-tor:0.1.2
 ```
 
 Build and push both images and pin their digests with:
@@ -214,3 +211,7 @@ Independent Onion private keys are not returned by the API, shown in logs, or ex
 ## Scope
 
 Pages hosts pre-built static HTML, CSS, JavaScript, images, fonts, WebAssembly, and other files. It does not execute uploaded PHP, Node.js, Python, shell, or other server-side code.
+
+## Global settings
+
+Pages 0.1.2 adds a complete global Settings workspace. New projects can inherit a preferred template, draft or published state, SPA fallback, CORS, directory listing, and cache policy. Independent Onion services can be enabled globally and created automatically, while automatic backup schedules, retention limits, storage cleanup, privacy-aware statistics, session duration, and editor preferences can all be configured from the dashboard.

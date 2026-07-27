@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.1.2] - 2026-07-27
+
+### Added
+
+- Added a complete global Settings workspace for publishing defaults, Onion services, backups, statistics, editor preferences, and security.
+- Added configurable automatic backup schedules, retention, and storage cleanup.
+- Added privacy controls for page-view counting, Do Not Track, and local visits.
+- Added configurable editor font size, tab size, word wrapping, and auto-save preferences.
+
+### Improved
+
+- Aligned dashboard statistic cards and the two-column overview layout to a consistent grid.
+- New projects now inherit configurable template, publishing, caching, CORS, SPA, and directory-listing defaults.
+
+
 ## 0.1.1
 
 - Removed the unintended vertical scrollbar and native arrow controls from the website detail tab bar.

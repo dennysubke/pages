@@ -23,7 +23,7 @@ const MAX_UPLOAD_BYTES = Number.parseInt(process.env.MAX_UPLOAD_BYTES || String(
 const MAX_EXTRACTED_BYTES = Number.parseInt(process.env.MAX_EXTRACTED_BYTES || String(MAX_UPLOAD_BYTES * 5), 10);
 const ADMIN_PASSWORD = process.env.PAGES_ADMIN_PASSWORD || process.env.APP_PASSWORD || '';
 const DISABLE_AUTH = process.env.PAGES_DISABLE_AUTH === 'true';
-const APP_VERSION = '0.1.1';
+const APP_VERSION = '0.1.2';
 const APP_HIDDEN_SERVICE_RAW = process.env.APP_HIDDEN_SERVICE || process.env.PAGES_HIDDEN_SERVICE || '';
 const DEVICE_DOMAIN_NAME_RAW = process.env.DEVICE_DOMAIN_NAME || process.env.PAGES_DEVICE_DOMAIN || '';
 const PUBLIC_PORT = Number.parseInt(process.env.PAGES_PUBLIC_PORT || '8377', 10);
@@ -97,6 +97,58 @@ function setSetting(key, value) {
 }
 if (!getSetting('session_secret')) setSetting('session_secret', crypto.randomBytes(48).toString('hex'));
 const SESSION_SECRET = getSetting('session_secret');
+
+const DEFAULT_GLOBAL_SETTINGS = Object.freeze({
+  default_published: true,
+  default_template: 'portfolio',
+  default_spa_fallback: false,
+  default_cache_policy: '30d',
+  default_cors: false,
+  default_directory_listing: false,
+  independent_onion_enabled: true,
+  auto_create_onion: false,
+  onion_published_only: true,
+  restore_onion_on_startup: true,
+  backup_schedule: 'off',
+  backup_retention: 10,
+  backup_max_storage_mb: 1024,
+  statistics_enabled: true,
+  respect_do_not_track: true,
+  ignore_local_visits: true,
+  statistics_retention_days: 365,
+  session_hours: 168,
+  editor_font_size: 14,
+  editor_tab_size: 2,
+  editor_word_wrap: true,
+  editor_autosave: false,
+  editor_autosave_delay: 1200,
+  confirm_unsaved: true,
+  show_builtin_templates: true,
+  default_template_category: 'All'
+});
+function parseStoredSetting(key) {
+  const raw = getSetting(`global.${key}`);
+  if (raw === undefined) return DEFAULT_GLOBAL_SETTINGS[key];
+  try { return JSON.parse(raw); } catch { return raw; }
+}
+function globalSettings() {
+  return Object.fromEntries(Object.keys(DEFAULT_GLOBAL_SETTINGS).map((key) => [key, parseStoredSetting(key)]));
+}
+function updateGlobalSettings(input = {}) {
+  const current = globalSettings();
+  const next = { ...current };
+  const booleans = ['default_published','default_spa_fallback','default_cors','default_directory_listing','independent_onion_enabled','auto_create_onion','onion_published_only','restore_onion_on_startup','statistics_enabled','respect_do_not_track','ignore_local_visits','editor_word_wrap','editor_autosave','confirm_unsaved','show_builtin_templates'];
+  for (const key of booleans) if (key in input) next[key] = Boolean(input[key]);
+  if (TEMPLATE_IDS.has(String(input.default_template || ''))) next.default_template = String(input.default_template);
+  if (['none','1h','1d','30d'].includes(input.default_cache_policy)) next.default_cache_policy = input.default_cache_policy;
+  if (['off','daily','weekly','before_publish'].includes(input.backup_schedule)) next.backup_schedule = input.backup_schedule;
+  for (const [key,min,max] of [['backup_retention',1,100],['backup_max_storage_mb',100,102400],['statistics_retention_days',1,3650],['session_hours',1,720],['editor_font_size',11,24],['editor_tab_size',2,8],['editor_autosave_delay',300,10000]]) {
+    if (key in input) next[key] = Math.min(max, Math.max(min, Number.parseInt(input[key],10) || current[key]));
+  }
+  if (typeof input.default_template_category === 'string') next.default_template_category = input.default_template_category.slice(0,40);
+  for (const [key,value] of Object.entries(next)) setSetting(`global.${key}`, JSON.stringify(value));
+  return next;
+}
 
 const now = () => new Date().toISOString();
 const json = (res, status, value, headers = {}) => {
@@ -693,7 +745,12 @@ function securityHeaders(site, filename) {
   return headers;
 }
 
-function recordView(siteId) {
+function recordView(req, siteId) {
+  const settings = globalSettings();
+  if (!settings.statistics_enabled) return;
+  if (settings.respect_do_not_track && String(req.headers.dnt || '') === '1') return;
+  const ip = String(req.socket.remoteAddress || '');
+  if (settings.ignore_local_visits && (/^(::1|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(ip) || ip.startsWith('::ffff:192.168.') || ip.startsWith('::ffff:10.'))) return;
   db.prepare('UPDATE sites SET views = views + 1, last_view_at = ? WHERE id = ?').run(now(), siteId);
 }
 
@@ -762,7 +819,7 @@ function serveSite(req, res, site, relativePath, requestPath) {
       return text(res, 404, 'Not found', 'text/plain; charset=utf-8', securityHeaders(site, ''));
     }
     const body = directoryPage(site, requestPath, target);
-    if (req.method === 'GET' && !isPreview) recordView(site.id);
+    if (req.method === 'GET' && !isPreview) recordView(req, site.id);
     return text(res, 200, body, 'text/html; charset=utf-8', securityHeaders(site, 'index.html'));
   }
 
@@ -777,7 +834,7 @@ function serveSite(req, res, site, relativePath, requestPath) {
     if (existsSync(errorPage)) return sendFile(res, errorPage, securityHeaders(site, errorPage));
     return text(res, 404, 'Not found', 'text/plain; charset=utf-8', securityHeaders(site, ''));
   }
-  if (req.method === 'GET' && !isPreview && mimeFor(target).startsWith('text/html')) recordView(site.id);
+  if (req.method === 'GET' && !isPreview && mimeFor(target).startsWith('text/html')) recordView(req, site.id);
   const headers = securityHeaders(site, target);
   if (req.method === 'HEAD') {
     const stat = statSync(target);
@@ -934,6 +991,40 @@ function createBackup(site) {
   return db.prepare('SELECT * FROM backups WHERE id = ?').get(info.lastInsertRowid);
 }
 
+function cleanupBackups(settings = globalSettings()) {
+  const retention = Number(settings.backup_retention || 10);
+  for (const site of db.prepare('SELECT id FROM sites').all()) {
+    const rows = db.prepare('SELECT * FROM backups WHERE site_id = ? ORDER BY created_at DESC').all(site.id);
+    for (const row of rows.slice(retention)) {
+      rmSync(path.join(BACKUPS_DIR, row.filename), { force: true });
+      db.prepare('DELETE FROM backups WHERE id = ?').run(row.id);
+    }
+  }
+  const max = Number(settings.backup_max_storage_mb || 1024) * 1024 * 1024;
+  let rows = db.prepare('SELECT * FROM backups ORDER BY created_at DESC').all();
+  let total = rows.reduce((sum,row)=>sum+Number(row.size||0),0);
+  for (const row of rows.reverse()) {
+    if (total <= max) break;
+    rmSync(path.join(BACKUPS_DIR, row.filename), { force: true });
+    db.prepare('DELETE FROM backups WHERE id = ?').run(row.id);
+    total -= Number(row.size||0);
+  }
+}
+function runScheduledBackups() {
+  const settings = globalSettings();
+  if (!['daily','weekly'].includes(settings.backup_schedule)) return;
+  const threshold = settings.backup_schedule === 'daily' ? 86400000 : 604800000;
+  for (const site of db.prepare('SELECT * FROM sites').all()) {
+    const latest = db.prepare('SELECT created_at FROM backups WHERE site_id = ? ORDER BY created_at DESC LIMIT 1').get(site.id)?.created_at;
+    if (!latest || Date.now() - new Date(latest).getTime() >= threshold) {
+      try { createBackup(site); } catch {}
+    }
+  }
+  cleanupBackups(settings);
+}
+setInterval(runScheduledBackups, 60 * 60 * 1000).unref();
+setTimeout(runScheduledBackups, 60 * 1000).unref();
+
 async function handleApi(req, res, url) {
   if (url.pathname === '/api/health') return json(res, 200, { ok: true, version: APP_VERSION, onion_available: Boolean(ONION_HOST), managed_tor_available: torRuntime.available, managed_tor_state: torRuntime.state, managed_tor_bootstrap: torRuntime.bootstrap_progress });
   if (url.pathname === '/api/auth/status') return json(res, 200, { authenticated: isAuthenticated(req), auth_disabled: DISABLE_AUTH, configured: Boolean(ADMIN_PASSWORD) });
@@ -944,14 +1035,28 @@ async function handleApi(req, res, url) {
     const actual = Buffer.from(String(ADMIN_PASSWORD));
     const valid = supplied.length === actual.length && crypto.timingSafeEqual(supplied, actual);
     if (!valid) return json(res, 401, { error: 'Incorrect password' });
-    const token = signSession({ exp: Date.now() + 7 * 24 * 60 * 60 * 1000, nonce: crypto.randomUUID() });
-    return json(res, 200, { ok: true }, { 'Set-Cookie': `pages_session=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=604800` });
+    const sessionSeconds = globalSettings().session_hours * 60 * 60;
+    const token = signSession({ exp: Date.now() + sessionSeconds * 1000, nonce: crypto.randomUUID() });
+    return json(res, 200, { ok: true }, { 'Set-Cookie': `pages_session=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${sessionSeconds}` });
   }
   if (url.pathname === '/api/auth/logout' && req.method === 'POST') {
     return json(res, 200, { ok: true }, { 'Set-Cookie': 'pages_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0' });
   }
   if (!isAuthenticated(req)) return json(res, 401, { error: 'Authentication required' });
 
+  if (url.pathname === '/api/settings' && req.method === 'GET') return json(res, 200, globalSettings());
+  if (url.pathname === '/api/settings' && req.method === 'PATCH') {
+    const updated = updateGlobalSettings(await readJson(req));
+    return json(res, 200, updated);
+  }
+  if (url.pathname === '/api/settings/statistics/reset' && req.method === 'POST') {
+    db.prepare('UPDATE sites SET views = 0, last_view_at = NULL').run();
+    return json(res, 200, { ok: true });
+  }
+  if (url.pathname === '/api/settings/backups/cleanup' && req.method === 'POST') {
+    cleanupBackups(globalSettings());
+    return json(res, 200, { ok: true });
+  }
   if (url.pathname === '/api/system' && req.method === 'GET') return json(res, 200, systemInfo(req));
 
   if (url.pathname === '/api/share/qr' && req.method === 'GET') {
@@ -997,16 +1102,20 @@ async function handleApi(req, res, url) {
     const createdAt = now();
     let info;
     try {
-      const templateId = TEMPLATE_IDS.has(String(body.template || '')) ? String(body.template) : 'portfolio';
-      const published = body.published === false || body.published === 'false' || body.published === '0' ? 0 : 1;
+      const defaults = globalSettings();
+      const templateId = TEMPLATE_IDS.has(String(body.template || '')) ? String(body.template) : defaults.default_template;
+      const published = body.published === undefined ? Number(defaults.default_published) : (body.published === false || body.published === 'false' || body.published === '0' ? 0 : 1);
       info = db.prepare(`INSERT INTO sites (name, slug, description, cors, spa_fallback, directory_listing, cache_policy, published, template_id, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(name, slug, String(body.description || '').slice(0, 300), templateId === 'nostr' || body.cors ? 1 : 0, body.spa_fallback ? 1 : 0, body.directory_listing ? 1 : 0, '30d', published, templateId, createdAt, createdAt);
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(name, slug, String(body.description || '').slice(0, 300), templateId === 'nostr' || (body.cors ?? defaults.default_cors) ? 1 : 0, (body.spa_fallback ?? defaults.default_spa_fallback) ? 1 : 0, (body.directory_listing ?? defaults.default_directory_listing) ? 1 : 0, defaults.default_cache_policy, published, templateId, createdAt, createdAt);
     } catch (error) {
       if (String(error.message).includes('UNIQUE')) return json(res, 409, { error: 'This URL slug is already in use' });
       throw error;
     }
     const site = getSite(info.lastInsertRowid);
     writeTemplate(siteDir(site), site.template_id || 'portfolio', name);
+    if (globalSettings().auto_create_onion && globalSettings().independent_onion_enabled && (!globalSettings().onion_published_only || site.published)) {
+      try { await createIndependentOnion(site.id, false); await reconcileOnionServices(); } catch {}
+    }
     return json(res, 201, getSite(site.id));
   }
 
@@ -1034,6 +1143,12 @@ async function handleApi(req, res, url) {
         body.published === undefined ? Number(site.published) : Number(Boolean(body.published)),
         now(), site.id
       );
+      if (body.published === true && !site.published && globalSettings().backup_schedule === 'before_publish') {
+        try { createBackup(site); cleanupBackups(globalSettings()); } catch {}
+      }
+      if (body.published === true && globalSettings().auto_create_onion && globalSettings().independent_onion_enabled && !onionForSite(site.id).created) {
+        try { await createIndependentOnion(site.id, false); } catch {}
+      }
       if (body.domains !== undefined) setDomains(site.id, body.domains);
     } catch (error) {
       if (String(error.message).includes('UNIQUE')) return json(res, 409, { error: 'This slug or domain is already in use' });
@@ -1042,6 +1157,7 @@ async function handleApi(req, res, url) {
     return json(res, 200, getSite(site.id));
   }
   if (action === 'onion' && req.method === 'POST') {
+    if (!globalSettings().independent_onion_enabled) return json(res, 403, { error: 'Independent Onion services are disabled in Settings' });
     const body = await readJson(req);
     const command = String(body.action || '').toLowerCase();
     try {
