@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">Pages logo</title>
+  <desc id="desc">A subtle layered-page symbol forming an abstract letter P.</desc>
+
+  <defs>
+    <linearGradient id="backGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0" stop-color="#2f68d8"/>
+      <stop offset="0.52" stop-color="#334fc2"/>
+      <stop offset="1" stop-color="#6f45c7"/>
+    </linearGradient>
+
+    <linearGradient id="midGradient" x1="5%" y1="0%" x2="95%" y2="100%">
+      <stop offset="0" stop-color="#67a6f5"/>
+      <stop offset="0.5" stop-color="#5076de"/>
+      <stop offset="1" stop-color="#443cb5"/>
+    </linearGradient>
+
+    <linearGradient id="loopGradient" x1="5%" y1="15%" x2="95%" y2="85%">
+      <stop offset="0" stop-color="#4452c2"/>
+      <stop offset="0.55" stop-color="#5940b5"/>
+      <stop offset="1" stop-color="#7848c6"/>
+    </linearGradient>
+
+    <linearGradient id="foldGradient" x1="8%" y1="8%" x2="92%" y2="92%">
+      <stop offset="0" stop-color="#3f74dd"/>
+      <stop offset="0.58" stop-color="#4b58c8"/>
+      <stop offset="1" stop-color="#6845bd"/>
+    </linearGradient>
+
+    <linearGradient id="paperGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0" stop-color="#f7f9ff"/>
+      <stop offset="0.48" stop-color="#eef3ff"/>
+      <stop offset="1" stop-color="#dbe5ff"/>
+    </linearGradient>
+  </defs>
+
+  <g>
+    <!-- Rear page -->
+    <path
+      d="M313 374 H512 V728 H313 Z"
+      fill="url(#backGradient)"/>
+
+    <!-- Rounded rear loop completing the abstract P -->
+    <path
+      d="M498 289 H622
+         C741 289 805 361 805 458
+         C805 568 746 637 647 663
+         L515 681
+         L515 585
+         L630 567
+         C684 557 714 520 714 463
+         C714 405 679 376 622 376
+         H498 Z"
+      fill="url(#loopGradient)"/>
+
+    <!-- Middle page -->
+    <path
+      d="M356 329 H596
+         C683 329 738 382 738 457
+         C738 541 682 579 606 605
+         C520 634 445 673 356 727 Z"
+      fill="url(#midGradient)"/>
+
+    <!-- Visible underside/fold -->
+    <path
+      d="M396 287 H618
+         C704 287 758 338 758 417
+         C758 505 698 551 613 580
+         C527 610 458 649 396 706
+         C451 635 522 590 607 559
+         C674 535 712 496 712 431
+         C712 367 674 335 615 335
+         H396 Z"
+      fill="url(#foldGradient)"/>
+
+    <!-- Main light page -->
+    <path
+      d="M396 287 H618
+         C704 287 758 338 758 417
+         C758 505 698 551 613 580
+         C527 610 458 649 396 706 Z"
+      fill="url(#paperGradient)"/>
+  </g>
+</svg>

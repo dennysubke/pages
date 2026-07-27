@@ -1,0 +1,8 @@
+DataDirectory /var/lib/tor
+SocksPort 0
+ControlSocket /run/tor-control/control
+CookieAuthentication 1
+CookieAuthFile /run/tor-control/control.authcookie
+RunAsDaemon 0
+SafeLogging 1
+Log notice stdout

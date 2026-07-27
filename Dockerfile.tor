@@ -1,0 +1,13 @@
+FROM alpine:3.22
+
+RUN apk add --no-cache tor tini su-exec
+
+COPY --chown=root:root tor/torrc /etc/tor/torrc
+COPY --chown=root:root tor/entrypoint.sh /usr/local/bin/pages-tor-entrypoint
+RUN chmod 0755 /usr/local/bin/pages-tor-entrypoint
+
+ENV PUID=1000 \
+    PGID=1000
+
+ENTRYPOINT ["/sbin/tini", "--", "/usr/local/bin/pages-tor-entrypoint"]
+CMD ["tor", "-f", "/etc/tor/torrc"]

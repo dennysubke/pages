@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f7f6fa">
+  <meta name="color-scheme" content="light dark">
+  <title>Pages</title>
+  <link rel="icon" href="/admin/logo.svg" type="image/svg+xml">
+  <link rel="icon" href="/admin/logo.png" type="image/png" sizes="512x512">
+  <link rel="apple-touch-icon" href="/admin/logo.png">
+  <link rel="stylesheet" href="/admin/styles.css">
+</head>
+<body>
+  <div id="app"></div>
+  <div id="toast-root" aria-live="polite"></div>
+  <input id="file-upload" type="file" multiple hidden>
+  <input id="folder-upload" type="file" webkitdirectory multiple hidden>
+  <input id="zip-upload" type="file" accept=".zip,application/zip" hidden>
+  <script type="module" src="/admin/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "name": "pages",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A beautiful static website host for Umbrel",
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "start": "node --no-warnings server.mjs",
+    "check": "node --check server.mjs && node --check public/app.js",
+    "test": "node test/template-library.mjs && node test/smoke.mjs && node test/modal-regression.mjs"
+  }
+}

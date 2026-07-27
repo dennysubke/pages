@@ -1,0 +1,128 @@
+[
+  {
+    "id": "portfolio",
+    "name": "Noir Portfolio",
+    "description": "A bold personal portfolio for designers, developers and makers.",
+    "category": "Personal",
+    "icon": "user",
+    "accent": "#a986ff",
+    "preview_name": "Alex Morgan",
+    "featured": true,
+    "tags": [
+      "Portfolio",
+      "Dark"
+    ]
+  },
+  {
+    "id": "startup",
+    "name": "Orbit Launch",
+    "description": "A polished product landing page with features, social proof and calls to action.",
+    "category": "Business",
+    "icon": "rocket",
+    "accent": "#7c6cff",
+    "preview_name": "Orbit",
+    "featured": true,
+    "tags": [
+      "Landing",
+      "Product"
+    ]
+  },
+  {
+    "id": "links",
+    "name": "Aura Links",
+    "description": "A refined link-in-bio page for profiles, projects and social channels.",
+    "category": "Personal",
+    "icon": "link",
+    "accent": "#e36cae",
+    "preview_name": "Maya",
+    "featured": false,
+    "tags": [
+      "Profile",
+      "Links"
+    ]
+  },
+  {
+    "id": "docs",
+    "name": "Northstar Docs",
+    "description": "Clean documentation with navigation, code blocks and responsive reading layout.",
+    "category": "Developer",
+    "icon": "book",
+    "accent": "#4b8cff",
+    "preview_name": "Northstar",
+    "featured": true,
+    "tags": [
+      "Docs",
+      "Developer"
+    ]
+  },
+  {
+    "id": "blog",
+    "name": "Paper Journal",
+    "description": "An editorial personal blog with featured stories and elegant typography.",
+    "category": "Content",
+    "icon": "pages",
+    "accent": "#e36f49",
+    "preview_name": "Field Notes",
+    "featured": false,
+    "tags": [
+      "Blog",
+      "Editorial"
+    ]
+  },
+  {
+    "id": "business",
+    "name": "Atelier Studio",
+    "description": "A sophisticated agency and small-business website with services and contact sections.",
+    "category": "Business",
+    "icon": "briefcase",
+    "accent": "#c79054",
+    "preview_name": "Atelier",
+    "featured": false,
+    "tags": [
+      "Agency",
+      "Business"
+    ]
+  },
+  {
+    "id": "coming-soon",
+    "name": "Afterglow",
+    "description": "A focused coming-soon page with launch message and email call to action.",
+    "category": "Business",
+    "icon": "clock",
+    "accent": "#ff7b70",
+    "preview_name": "Afterglow",
+    "featured": false,
+    "tags": [
+      "Launch",
+      "Minimal"
+    ]
+  },
+  {
+    "id": "nostr",
+    "name": "Purple Nostr",
+    "description": "A Nostr profile page with a prepared NIP-05 verification file and CORS support.",
+    "category": "Nostr",
+    "icon": "lightning",
+    "accent": "#9c68ff",
+    "preview_name": "npub creator",
+    "featured": true,
+    "tags": [
+      "Nostr",
+      "NIP-05"
+    ]
+  },
+  {
+    "id": "blank",
+    "name": "Blank Canvas",
+    "description": "A clean semantic HTML foundation with a lightweight design system.",
+    "category": "Developer",
+    "icon": "file",
+    "accent": "#8c8c96",
+    "preview_name": "Blank Canvas",
+    "featured": false,
+    "tags": [
+      "Starter",
+      "HTML"
+    ]
+  }
+]

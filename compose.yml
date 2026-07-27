@@ -1,0 +1,44 @@
+version: "3.7"
+
+services:
+  tor:
+    build:
+      context: .
+      dockerfile: Dockerfile.tor
+    image: pages-tor:local
+    restart: unless-stopped
+    environment:
+      PUID: "1000"
+      PGID: "1000"
+    volumes:
+      - ./data/tor/state:/var/lib/tor
+      - ./data/tor/control:/run/tor-control
+      - ./data/tor/site:/site-socket:ro
+
+  pages:
+    build: .
+    image: pages:local
+    restart: unless-stopped
+    depends_on:
+      - tor
+    environment:
+      PORT: "3000"
+      DATA_DIR: "/data"
+      PUID: "1000"
+      PGID: "1000"
+      PAGES_ADMIN_PASSWORD: "pages"
+      PAGES_DEVICE_DOMAIN: "localhost"
+      PAGES_PUBLIC_PORT: "3000"
+      PAGES_HIDDEN_SERVICE: ""
+      TOR_CONTROL_SOCKET: "/tor-control/control"
+      TOR_CONTROL_COOKIE: "/tor-control/control.authcookie"
+      TOR_ONION_TARGET: "unix:/site-socket/pages.sock"
+      TOR_SITE_SOCKET_DIR: "/site-socket"
+      MAX_UPLOAD_BYTES: "104857600"
+      MAX_EXTRACTED_BYTES: "524288000"
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/data
+      - ./data/tor/control:/tor-control:ro
+      - ./data/tor/site:/site-socket
