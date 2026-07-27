@@ -186,8 +186,8 @@ The smoke test includes a local Tor-control simulator and validates independent 
 The Umbrel package uses two multiarch images:
 
 ```text
-dennysubke/pages:0.1.0
-dennysubke/pages-tor:0.1.0
+dennysubke/pages:0.1.1
+dennysubke/pages-tor:0.1.1
 ```
 
 Build and push both images and pin their digests with:

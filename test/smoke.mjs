@@ -145,7 +145,7 @@ try {
 
   const health = await fetch(`${base}/api/health`).then((response) => response.json());
   assert.equal(health.ok, true);
-  assert.equal(health.version, '0.1.0');
+  assert.equal(health.version, '0.1.1');
   assert.equal(health.onion_available, true);
   assert.equal(health.managed_tor_available, true);
   assert.equal(health.managed_tor_state, 'ready');
@@ -153,7 +153,7 @@ try {
   assert.equal(existsSync(siteSocket), true);
 
   const system = await fetch(`${base}/api/system`).then((response) => response.json());
-  assert.equal(system.version, '0.1.0');
+  assert.equal(system.version, '0.1.1');
   assert.equal(system.access.local_origin, 'http://umbrel.local:8377');
   assert.equal(system.access.onion_origin, `http://${onionHost}`);
   assert.equal(system.access.onion_available, true);

@@ -166,7 +166,17 @@ a { color: inherit; }
 .detail-title h1 { margin: 0; font-size: 31px; letter-spacing: -0.05em; overflow: hidden; text-overflow: ellipsis; }
 .detail-title p { margin: 6px 0 0; color: var(--muted); font-size: 13px; }
 .detail-actions { margin-left: auto; display: flex; gap: 8px; }
-.tabs { display: flex; gap: 6px; border-bottom: 1px solid var(--border); margin-bottom: 24px; overflow-x: auto; }
+.tabs {
+  display: flex;
+  gap: 6px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 24px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.tabs::-webkit-scrollbar { display: none; }
 .tab { position: relative; border: 0; background: transparent; padding: 11px 14px 14px; color: var(--muted); font-weight: 620; font-size: 13px; cursor: pointer; white-space: nowrap; }
 .tab.active { color: var(--text); }
 .tab.active::after { content: ""; position: absolute; height: 2px; border-radius: 2px; background: var(--accent); left: 12px; right: 12px; bottom: -1px; }

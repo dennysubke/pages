@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.1
+
+- Removed the unintended vertical scrollbar and native arrow controls from the website detail tab bar.
+- No other application behavior or design was changed.
+
 ## 0.1.0
 
 - Initial complete release of Pages.

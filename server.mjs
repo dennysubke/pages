@@ -23,7 +23,7 @@ const MAX_UPLOAD_BYTES = Number.parseInt(process.env.MAX_UPLOAD_BYTES || String(
 const MAX_EXTRACTED_BYTES = Number.parseInt(process.env.MAX_EXTRACTED_BYTES || String(MAX_UPLOAD_BYTES * 5), 10);
 const ADMIN_PASSWORD = process.env.PAGES_ADMIN_PASSWORD || process.env.APP_PASSWORD || '';
 const DISABLE_AUTH = process.env.PAGES_DISABLE_AUTH === 'true';
-const APP_VERSION = '0.1.0';
+const APP_VERSION = '0.1.1';
 const APP_HIDDEN_SERVICE_RAW = process.env.APP_HIDDEN_SERVICE || process.env.PAGES_HIDDEN_SERVICE || '';
 const DEVICE_DOMAIN_NAME_RAW = process.env.DEVICE_DOMAIN_NAME || process.env.PAGES_DEVICE_DOMAIN || '';
 const PUBLIC_PORT = Number.parseInt(process.env.PAGES_PUBLIC_PORT || '8377', 10);

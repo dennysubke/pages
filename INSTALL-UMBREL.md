@@ -1,6 +1,6 @@
-# Pages 0.1.0 – Build and Umbrel installation
+# Pages 0.1.1 – Build and Umbrel installation
 
-This package contains the complete first release of Pages. The version intentionally remains `0.1.0` because no earlier build has been published.
+This package contains Pages 0.1.1, a focused maintenance release that removes an unintended vertical scrollbar from the website detail tabs.
 
 Pages now uses two containers in addition to Umbrel's app proxy:
 
@@ -53,27 +53,27 @@ The script deliberately builds without cache and performs the following actions:
 
 1. Creates or reuses the Buildx builder `pages-builder`.
 2. Builds `linux/amd64` and `linux/arm64` for the Pages web image.
-3. Pushes `dennysubke/pages:0.1.0` and `dennysubke/pages:latest`.
+3. Pushes `dennysubke/pages:0.1.1` and `dennysubke/pages:latest`.
 4. Builds `linux/amd64` and `linux/arm64` for the Tor sidecar.
-5. Pushes `dennysubke/pages-tor:0.1.0` and `dennysubke/pages-tor:latest`.
+5. Pushes `dennysubke/pages-tor:0.1.1` and `dennysubke/pages-tor:latest`.
 6. Reads both multiarch digests.
 7. Pins both image references in `../umbrel/denny-pages/docker-compose.yml`.
 
 Verify both published manifests:
 
 ```bash
-docker buildx imagetools inspect dennysubke/pages:0.1.0
-docker buildx imagetools inspect dennysubke/pages-tor:0.1.0
+docker buildx imagetools inspect dennysubke/pages:0.1.1
+docker buildx imagetools inspect dennysubke/pages-tor:0.1.1
 ```
 
 The Umbrel compose file should then contain two pinned references:
 
 ```yaml
-image: dennysubke/pages-tor:0.1.0@sha256:TOR_MULTIARCH_DIGEST
+image: dennysubke/pages-tor:0.1.1@sha256:TOR_MULTIARCH_DIGEST
 ```
 
 ```yaml
-image: dennysubke/pages:0.1.0@sha256:WEB_MULTIARCH_DIGEST
+image: dennysubke/pages:0.1.1@sha256:WEB_MULTIARCH_DIGEST
 ```
 
 Do not manually reuse the digest of an earlier Pages build.
