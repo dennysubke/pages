@@ -83,10 +83,10 @@ This address is independent of Umbrel's remote-Tor address. It is managed by the
 
 The available controls are:
 
-- **Generate** — create the first independent Onion identity
-- **Disable** — stop publishing while preserving the address and key
-- **Enable** — restore the same preserved address
-- **Regenerate** — permanently retire the current identity and create a new address
+- **Generate**: Create the first independent Onion identity
+- **Disable**: Stop publishing while preserving the address and key
+- **Enable**: Restore the same preserved address
+- **Regenerate**: Permanently retire the current identity and create a new address
 
 Disabled and retired Onion hostnames are blocked rather than falling through to the Pages dashboard. Regeneration intentionally makes the old address unusable.
 
