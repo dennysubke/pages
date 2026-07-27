@@ -9,7 +9,6 @@ Pages is a lightweight static website host designed for Umbrel. It combines a po
 ## Features
 
 - Multiple independently managed static websites
-- Umbrel-inspired light and dark interface
 - Overview dashboard with published sites, drafts, visits, storage, backups, and Tor status
 - Dedicated **Sites**, **Templates**, and **Settings** sections
 - Nine professionally designed, responsive templates
