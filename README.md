@@ -4,12 +4,15 @@
 
 # Pages
 
-Pages is a lightweight static website host designed for Umbrel. It combines a polished control panel, an integrated template library, browser-based editing, local backups, and flexible publishing over the local network, custom domains, Umbrel Tor, or a completely independent Onion v3 address for each website.
+Pages is a lightweight static website host designed for Umbrel. It combines a polished control panel, an integrated template library, browser-based editing, local backups, and flexible publishing over the local network, custom domains, Tor, or a completely independent Onion v3 address for each website.
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/dennysubke/pages/master/public/banner.png" alt="Pages Banner">
+</p>
 
 ## Features
 
 - Multiple independently managed static websites
-- Umbrel-inspired light and dark interface
 - Overview dashboard with published sites, drafts, visits, storage, backups, and Tor status
 - Dedicated **Sites**, **Templates**, and **Settings** sections
 - Nine professionally designed, responsive templates
